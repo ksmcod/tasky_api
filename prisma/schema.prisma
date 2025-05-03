@@ -13,3 +13,17 @@ datasource db {
   provider = "mongodb"
   url      = env("DATABASE_URL")
 }
+
+model User {
+  id       String  @id @default(auto()) @map("_id") @db.ObjectId
+  name     String
+  email    String  @unique
+  password String? // Optional. Null if using OAuth
+  image    String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  provider   String? // OAuth provider
+  providerId String? // OAuth provider ID
+}
