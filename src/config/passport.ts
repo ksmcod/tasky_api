@@ -45,7 +45,7 @@ export const githubStrategy = (passport: PassportStatic) => {
           }
 
           // Generate token
-          const token = createToken(user.id);
+          const token = createToken({ userId: user.id });
           //   console.log("User: ", user, "\nToken: ", token);
           done(null, { user, token });
         } catch (error) {

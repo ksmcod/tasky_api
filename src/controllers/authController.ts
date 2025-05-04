@@ -56,7 +56,7 @@ export async function registerController(req: Request, res: Response) {
     }
 
     // Create a token for the user
-    const token = createToken(newUser.id);
+    const token = createToken({ userId: newUser.id });
 
     // Set the token in the response
     setToken(token, res);
@@ -119,7 +119,7 @@ export async function loginController(req: Request, res: Response) {
     }
 
     // Create a token for the user
-    const token = createToken(user.id);
+    const token = createToken({ userId: user.id });
 
     // Set the token in the response
     setToken(token, res);
