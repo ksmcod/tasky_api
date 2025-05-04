@@ -6,12 +6,19 @@ import db from "../lib/db";
 import { createToken } from "../utils/createToken";
 import setToken from "../utils/setToken";
 
+// Register controller
+// This controller handles user registration
 export async function registerController(req: Request, res: Response) {
   try {
     // Validate the request body
     const parsedData = registerSchema.safeParse(req.body);
 
     if (!parsedData.success) {
+      if (parsedData.error.issues[0].message) {
+        res.status(400).json({ message: parsedData.error.issues[0].message });
+        return;
+      }
+
       res.status(400).json({ message: "Please fill all fields" });
       return;
     }
