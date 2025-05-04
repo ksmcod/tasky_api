@@ -1,8 +1,10 @@
-import { NextFunction, Request, Response } from "express";
+import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 
 import { registerSchema } from "../schemas/authSchemas";
 import db from "../lib/db";
+import { createToken } from "../utils/createToken";
+import setToken from "../utils/setToken";
 
 export async function registerController(req: Request, res: Response) {
   try {
@@ -41,10 +43,15 @@ export async function registerController(req: Request, res: Response) {
       return;
     }
 
-    res.status(201).json(newUser);
-    return;
+    // Create a token for the user
+    const token = createToken(newUser.id);
 
-    // return res.status(201).json({ message: "User registered successfully" });
+    // Set the token in the response
+    setToken(token, res);
+
+    // Send the response
+    res.status(201).json({ message: "Registration successful" });
+    return;
   } catch (error) {
     console.log("Error in registerController:", error);
     res.status(500).json({ message: "Internal server error" });
