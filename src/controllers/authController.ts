@@ -77,6 +77,11 @@ export async function loginController(req: Request, res: Response) {
 
   if (!parsedData.success) {
     if (parsedData.error.issues[0].message) {
+      if (parsedData.error.issues[0].message === "Required") {
+        res.status(400).json({ message: "Please fill all fields" });
+        return;
+      }
+
       res.status(400).json({ message: parsedData.error.issues[0].message });
       return;
     }
