@@ -14,6 +14,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum TeamRole {
+  CREATOR
+  MEMBER
+}
+
 model User {
   id       String  @id @default(auto()) @map("_id") @db.ObjectId
   name     String
@@ -26,4 +31,43 @@ model User {
 
   provider   String? // OAuth provider
   providerId String? // OAuth provider ID
+
+  // Relations
+  teamsCreated Team[]       @relation("TeamCreator")
+  memberships  TeamMember[]
+}
+
+model Team {
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  description String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  creatorId String       @db.ObjectId
+  creator   User         @relation("TeamCreator", fields: [creatorId], references: [id], onDelete: Restrict)
+  members   TeamMember[]
+
+  @@index([creatorId])
+}
+
+model TeamMember {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  userId String @db.ObjectId
+  teamId String @db.ObjectId
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  team Team @relation(fields: [teamId], references: [id], onDelete: Restrict)
+
+  role TeamRole @default(MEMBER)
+
+  joinedAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, teamId])
+  @@index([userId])
+  @@index([teamId])
 }
