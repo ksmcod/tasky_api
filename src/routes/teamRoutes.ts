@@ -4,4 +4,6 @@ import { createNewTeamController } from "../controllers/teamController";
 
 const teamRoutes = Router();
 
-teamRoutes.post("new-team", authMiddleware, createNewTeamController);
+teamRoutes.post("/new-team", authMiddleware, createNewTeamController);
+
+export default teamRoutes;

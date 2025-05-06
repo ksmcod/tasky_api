@@ -1,4 +1,4 @@
-import express from "express";
+import express, { Request, Response, NextFunction } from "express";
 import cookieParser from "cookie-parser";
 import morgan from "morgan";
 import passport from "passport";
@@ -30,5 +30,20 @@ if (process.env.NODE_ENV !== "production") {
 
 // Configure routes
 app.use("/api", apiRoutes);
+
+// Catch all route
+app.use(/^\/.*/, (req: Request, res: Response) => {
+  res.status(404).json({ message: "Route not found" });
+  return;
+});
+
+// Error handling middleware
+app.use(
+  /^\/.*/,
+  (err: any, req: Request, res: Response, next: NextFunction) => {
+    console.error(err.stack);
+    res.status(500).json({ message: "Internal server error" });
+  }
+);
 
 export default app;
