@@ -25,10 +25,13 @@ export async function createNewTeamController(req: Request, res: Response) {
   try {
     const userId = req.userId as string;
 
+    const teamCode = Math.random().toString(36).slice(2, 10).toLowerCase();
+
     const newTeam = await db.team.create({
       data: {
         name: parsedData.data.name,
         description: parsedData.data.description ?? "",
+        joinCode: teamCode,
         creator: { connect: { id: userId } },
         members: {
           create: {
