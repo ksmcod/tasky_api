@@ -1,6 +1,10 @@
 import { Request, Response } from "express";
+import z from "zod";
 import db from "../lib/db";
-import { createTeamSchema } from "../schemas/teamSchemas";
+import {
+  createTeamSchema,
+  removeMemberParamsSchema,
+} from "../schemas/teamSchemas";
 
 // Create new team controller
 // This controller handles the creation of new teams
@@ -122,5 +126,80 @@ export async function joinTeamController(req: Request, res: Response) {
   } catch (error) {
     console.log("Error in joining team: ", error);
     res.status(500).json({ message: "Internal server error" });
+  }
+}
+
+// Remove team member controller
+// This controller function handles removing a member from a team
+export async function removeTeamMember(req: Request, res: Response) {
+  try {
+    // 1. Validate params
+    const { member_email, teamCode } = removeMemberParamsSchema.parse(
+      req.params
+    );
+    const requesterId = req.userId as string;
+
+    // 2. Verify team exists
+    const team = await db.team.findUnique({
+      where: { joinCode: teamCode },
+    });
+    if (!team) {
+      res.status(404).json({ message: "Team not found." });
+      return;
+    }
+
+    // 3. Ensure requester is creator
+    const auth = await db.teamMember.findFirst({
+      where: { userId: requesterId, teamId: team.id, role: "CREATOR" },
+    });
+    if (!auth) {
+      res.status(403).json({ message: "Forbidden: must be team creator." });
+      return;
+    }
+
+    // 4. Fetch user to remove
+    const userToRemove = await db.user.findUnique({
+      where: { email: member_email },
+    });
+    if (!userToRemove) {
+      res.status(404).json({ message: "User not found." });
+      return;
+    }
+
+    // 5. Fetch their membership
+    const membership = await db.teamMember.findUnique({
+      where: {
+        userId_teamId: { userId: userToRemove.id, teamId: team.id },
+      },
+    });
+    if (!membership) {
+      res.status(404).json({ message: "User is not a member of this team." });
+      return;
+    }
+    if (membership.role === "CREATOR") {
+      res.status(400).json({ message: "Cannot remove the team creator." });
+      return;
+    }
+
+    // 6. Delete membership
+    await db.teamMember.delete({
+      where: {
+        userId_teamId: { userId: userToRemove.id, teamId: team.id },
+      },
+    });
+
+    res
+      .status(200)
+      .json({ message: `${userToRemove.name} removed from ${team.name}.` });
+    return;
+  } catch (err) {
+    // Zod invalidation
+    if (err instanceof z.ZodError) {
+      res.status(400).json({ message: err.errors[0].message });
+      return;
+    }
+    console.error("removeTeamMember error:", err);
+    res.status(500).json({ message: "Internal server error" });
+    return;
   }
 }
