@@ -11,3 +11,11 @@ export interface AllTeamsReturnType {
   joinedAt: Date;
   role: TeamRole;
 }
+
+export interface TeamMemberReturnType {
+  name: string;
+  email: string;
+  image: string;
+  role: TeamRole;
+  joinedAt: Date;
+}

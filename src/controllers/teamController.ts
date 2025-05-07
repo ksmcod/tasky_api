@@ -210,8 +210,6 @@ export async function removeTeamMember(req: Request, res: Response) {
 // and returns them in a specific format
 export async function getAllTeams(req: Request, res: Response) {
   try {
-    const teams: AllTeamsReturnType[] = [];
-
     const userId = req.userId as string;
 
     const queryResult = await db.teamMember.findMany({
@@ -229,18 +227,16 @@ export async function getAllTeams(req: Request, res: Response) {
       return;
     }
 
-    // Map through the query result and push to teams array
-    // This is to ensure that the response is in the format of AllTeamsReturnType
-    queryResult.map((item) => {
-      teams.push({
-        name: item.team.name,
-        description: item.team.description ?? "",
-        joinCode: item.team.joinCode,
-        createdAt: item.team.createdAt,
-        joinedAt: item.joinedAt,
-        role: item.role,
-      });
-    });
+    // Map through the query result and modify the structure
+    // to match the AllTeamsReturnType interface
+    const teams = queryResult.map((item) => ({
+      name: item.team.name,
+      description: item.team.description ?? "",
+      joinCode: item.team.joinCode,
+      createdAt: item.team.createdAt,
+      joinedAt: item.joinedAt,
+      role: item.role,
+    }));
 
     res.status(200).json(teams);
     return;
@@ -248,5 +244,75 @@ export async function getAllTeams(req: Request, res: Response) {
     console.log("Error in fetching all teams: ", error);
     res.status(500).json({ message: "Internal server error" });
     return;
+  }
+}
+
+// Get team members controller
+// This controller function fetches all members of a team
+// and returns them in a specific format
+export async function getTeamMembers(req: Request, res: Response) {
+  try {
+    const { teamCode } = req.params;
+    const userId = req.userId as string;
+
+    // Verify that the team actually exists
+    const team = await db.team.findUnique({
+      where: {
+        joinCode: teamCode,
+      },
+    });
+
+    if (!team) {
+      res.status(404).json({ message: "Team does not exist" });
+      return;
+    }
+
+    // Verify that the user is a member of this team
+    const isMember = await db.teamMember.findUnique({
+      where: {
+        userId_teamId: {
+          userId: userId,
+          teamId: team.id,
+        },
+      },
+    });
+
+    if (!isMember) {
+      res
+        .status(403)
+        .json({ message: "You are not allowed to view this team" });
+      return;
+    }
+
+    // Fetch all members of the team
+    const queryResult = await db.teamMember.findMany({
+      where: {
+        teamId: team.id,
+      },
+      include: {
+        user: true,
+      },
+    });
+
+    // If no members are found, return message
+    if (!queryResult) {
+      res.status(200).json({ message: "No members found" });
+      return;
+    }
+
+    // Map through the query result and modify the structure
+    // to match the TeamMemberReturnType interface
+    const members = queryResult.map((item) => ({
+      name: item.user.name,
+      email: item.user.email,
+      image: item.user.image,
+      role: item.role,
+      joinedAt: item.joinedAt,
+    }));
+
+    res.status(200).json(members);
+  } catch (error) {
+    console.log("Error in fetching all teams: ", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 }
