@@ -62,7 +62,7 @@ model TeamMember {
 
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Restrict)
-  team Team @relation(fields: [teamId], references: [id], onDelete: Restrict)
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   role TeamRole @default(MEMBER)
 

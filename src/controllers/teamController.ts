@@ -5,7 +5,7 @@ import {
   createTeamSchema,
   removeMemberParamsSchema,
 } from "../schemas/teamSchemas";
-import { AllTeamsReturnType } from "../types";
+import { AllTeamsReturnType, TeamMemberReturnType } from "../types";
 
 // Create new team controller
 // This controller handles the creation of new teams
@@ -229,7 +229,7 @@ export async function getAllUserTeamsController(req: Request, res: Response) {
 
     // Map through the query result and modify the structure
     // to match the AllTeamsReturnType interface
-    const teams = queryResult.map((item) => ({
+    const teams: AllTeamsReturnType[] = queryResult.map((item) => ({
       name: item.team.name,
       description: item.team.description ?? "",
       joinCode: item.team.joinCode,
@@ -307,7 +307,7 @@ export async function getAllTeamMembersController(req: Request, res: Response) {
 
     // Map through the query result and modify the structure
     // to match the TeamMemberReturnType interface
-    const members = queryResult.map((item) => ({
+    const members: TeamMemberReturnType[] = queryResult.map((item) => ({
       name: item.user.name,
       email: item.user.email,
       image: item.user.image,
@@ -322,6 +322,10 @@ export async function getAllTeamMembersController(req: Request, res: Response) {
   }
 }
 
+// Leave team controller
+// This controller function handles a user leaving a team
+// It verifies that the user is a member of the team and removes them if yes
+// It also checks if the user is the creator of the team and prevents them from leaving
 export async function leaveTeamController(req: Request, res: Response) {
   try {
     const userId = req.userId as string;
@@ -373,5 +377,62 @@ export async function leaveTeamController(req: Request, res: Response) {
     console.log("Error in leaving team: ", error);
     res.status(500).json({ message: "Internal server error" });
     return;
+  }
+}
+
+// Delete team controller
+// This controller function handles deleting a team
+// It verifies that the user is the creator of the team and prevents others from deleting it
+export async function deleteTeamController(req: Request, res: Response) {
+  try {
+    const userId = req.userId as string;
+    const { teamCode } = req.params;
+
+    if (!teamCode) {
+      res.status(400).json({ message: "Bad request" });
+      return;
+    }
+
+    // Verify that the team actually exists
+    const team = await db.team.findUnique({
+      where: {
+        joinCode: teamCode,
+      },
+    });
+
+    if (!team) {
+      res.status(404).json({ message: "Team does not exist" });
+      return;
+    }
+
+    // Verify that user is creator of the team
+    const isCreator = await db.teamMember.findUnique({
+      where: {
+        userId_teamId: {
+          userId: userId,
+          teamId: team.id,
+        },
+        role: "CREATOR",
+      },
+    });
+
+    if (!isCreator) {
+      res
+        .status(403)
+        .json({ message: "You are not allowed to perform this action" });
+      return;
+    }
+
+    // Delete the team
+    await db.team.delete({
+      where: {
+        joinCode: teamCode,
+      },
+    });
+
+    res.status(200).json({ message: `You have deleted ${team.name}` });
+  } catch (error) {
+    console.log("Error in deleting team: ", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 }
