@@ -255,6 +255,11 @@ export async function getAllTeamMembersController(req: Request, res: Response) {
     const { teamCode } = req.params;
     const userId = req.userId as string;
 
+    if (!teamCode) {
+      res.status(400).json({ message: "Bad request" });
+      return;
+    }
+
     // Verify that the team actually exists
     const team = await db.team.findUnique({
       where: {
@@ -312,7 +317,61 @@ export async function getAllTeamMembersController(req: Request, res: Response) {
 
     res.status(200).json(members);
   } catch (error) {
-    console.log("Error in fetching all teams: ", error);
+    console.log("Error in fetching all team members: ", error);
     res.status(500).json({ message: "Internal server error" });
+  }
+}
+
+export async function leaveTeamController(req: Request, res: Response) {
+  try {
+    const userId = req.userId as string;
+    const { teamCode } = req.params;
+
+    // Verify that the team actually exists
+    const team = await db.team.findUnique({
+      where: {
+        joinCode: teamCode,
+      },
+    });
+
+    if (!team) {
+      res.status(404).json({ message: "Team does not exist" });
+      return;
+    }
+
+    const isMember = await db.teamMember.findUnique({
+      where: {
+        userId_teamId: {
+          userId: userId,
+          teamId: team.id,
+        },
+      },
+    });
+
+    if (!isMember) {
+      res.status(403).json({ message: "You are not a member of this team" });
+      return;
+    }
+
+    if (isMember.role === "CREATOR") {
+      res.status(400).json({ message: "You cannot leave a team you created" });
+      return;
+    }
+
+    // Remove user from the team
+    await db.teamMember.delete({
+      where: {
+        userId_teamId: {
+          userId: userId,
+          teamId: team.id,
+        },
+      },
+    });
+
+    res.status(200).json({ message: `You left ${team.name}` });
+  } catch (error) {
+    console.log("Error in leaving team: ", error);
+    res.status(500).json({ message: "Internal server error" });
+    return;
   }
 }
