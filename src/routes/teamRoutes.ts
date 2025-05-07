@@ -2,18 +2,21 @@ import { Router } from "express";
 import authMiddleware from "../middlewares/authMiddleware";
 import {
   createNewTeamController,
-  getAllTeams,
-  getTeamMembers,
+  getAllUserTeamsController,
+  getAllTeamMembersController,
   joinTeamController,
-  removeTeamMember,
+  removeTeamMemberController,
 } from "../controllers/teamController";
 
 const teamRoutes = Router();
 
-teamRoutes.get("/", getAllTeams);
-teamRoutes.get("/:teamCode/members", getTeamMembers);
+teamRoutes.get("/", getAllTeamMembersController);
+teamRoutes.get("/:teamCode/members", getAllTeamMembersController);
 teamRoutes.post("/new", createNewTeamController);
 teamRoutes.post("/join", joinTeamController);
-teamRoutes.delete("/:teamCode/members/:member_email", removeTeamMember);
+teamRoutes.delete(
+  "/:teamCode/members/:member_email",
+  removeTeamMemberController
+);
 
 export default teamRoutes;

@@ -132,7 +132,7 @@ export async function joinTeamController(req: Request, res: Response) {
 
 // Remove team member controller
 // This controller function handles removing a member from a team
-export async function removeTeamMember(req: Request, res: Response) {
+export async function removeTeamMemberController(req: Request, res: Response) {
   try {
     // 1. Validate params
     const { member_email, teamCode } = removeMemberParamsSchema.parse(
@@ -208,7 +208,7 @@ export async function removeTeamMember(req: Request, res: Response) {
 // Get all teams controller
 // This controller function fetches all teams a user is a member of
 // and returns them in a specific format
-export async function getAllTeams(req: Request, res: Response) {
+export async function getAllUserTeamsController(req: Request, res: Response) {
   try {
     const userId = req.userId as string;
 
@@ -250,7 +250,7 @@ export async function getAllTeams(req: Request, res: Response) {
 // Get team members controller
 // This controller function fetches all members of a team
 // and returns them in a specific format
-export async function getTeamMembers(req: Request, res: Response) {
+export async function getAllTeamMembersController(req: Request, res: Response) {
   try {
     const { teamCode } = req.params;
     const userId = req.userId as string;
