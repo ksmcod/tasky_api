@@ -5,6 +5,7 @@ import {
   createTeamSchema,
   removeMemberParamsSchema,
 } from "../schemas/teamSchemas";
+import { AllTeamsReturnType } from "../types";
 
 // Create new team controller
 // This controller handles the creation of new teams
@@ -199,6 +200,52 @@ export async function removeTeamMember(req: Request, res: Response) {
       return;
     }
     console.error("removeTeamMember error:", err);
+    res.status(500).json({ message: "Internal server error" });
+    return;
+  }
+}
+
+// Get all teams controller
+// This controller function fetches all teams a user is a member of
+// and returns them in a specific format
+export async function getAllTeams(req: Request, res: Response) {
+  try {
+    const teams: AllTeamsReturnType[] = [];
+
+    const userId = req.userId as string;
+
+    const queryResult = await db.teamMember.findMany({
+      where: {
+        user: { id: userId },
+      },
+      include: {
+        team: true,
+      },
+    });
+
+    // If user is not a member of any team, return message
+    if (!queryResult) {
+      res.status(200).json({ message: "You are not a member of any team" });
+      return;
+    }
+
+    // Map through the query result and push to teams array
+    // This is to ensure that the response is in the format of AllTeamsReturnType
+    queryResult.map((item) => {
+      teams.push({
+        name: item.team.name,
+        description: item.team.description ?? "",
+        joinCode: item.team.joinCode,
+        createdAt: item.team.createdAt,
+        joinedAt: item.joinedAt,
+        role: item.role,
+      });
+    });
+
+    res.status(200).json(teams);
+    return;
+  } catch (error) {
+    console.log("Error in fetching all teams: ", error);
     res.status(500).json({ message: "Internal server error" });
     return;
   }

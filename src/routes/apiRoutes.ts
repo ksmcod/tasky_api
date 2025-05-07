@@ -9,6 +9,6 @@ const apiRoutes = Router();
 
 apiRoutes.use("/auth", authRoutes);
 apiRoutes.use("/user", userRoutes);
-apiRoutes.use("/team", authMiddleware, teamRoutes);
+apiRoutes.use("/teams", authMiddleware, teamRoutes);
 
 export default apiRoutes;
