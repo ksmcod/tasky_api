@@ -131,3 +131,19 @@ export async function loginController(req: Request, res: Response) {
     res.status(500).json({ message: "Internal server error" });
   }
 }
+
+// Logout controller
+// This controller handles user logout
+export async function logoutController(req: Request, res: Response) {
+  try {
+    // Clear the token from the response
+    res.clearCookie("user_token");
+    // setToken("", res);
+
+    // Send the response
+    res.status(200).json({ message: "Logout successful" });
+  } catch (error) {
+    console.log("Error in logoutController:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+}
