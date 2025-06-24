@@ -46,7 +46,7 @@ export async function registerController(req: Request, res: Response) {
         name: `${parsedData.data.firstName} ${parsedData.data.lastName}`,
         email: parsedData.data.email,
         password: hashedPassword,
-        image: `https://avatar.iran.liara.run/username?username=${parsedData.data.firstName}+${parsedData.data.lastName}`,
+        image: `https://ui-avatars.com/api/?name=${parsedData.data.firstName}+${parsedData.data.lastName}`,
       },
     });
 

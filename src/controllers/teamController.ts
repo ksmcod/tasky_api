@@ -249,6 +249,7 @@ export async function getAllUserTeamsController(req: Request, res: Response) {
 
 // Is team member controller
 // This controller function verifies that a user is part of a team
+// and returns the team
 export async function getUserMembershipController(req: Request, res: Response) {
   try {
     const userId = req.userId as string;
@@ -261,13 +262,13 @@ export async function getUserMembershipController(req: Request, res: Response) {
     }
 
     // Verify that the team actually exists
-    const team = await db.team.findUnique({
+    const teamExists = await db.team.findUnique({
       where: {
         joinCode: teamCode,
       },
     });
 
-    if (!team) {
+    if (!teamExists) {
       res.status(404).json({ message: "Team does not exist" });
       return;
     }
@@ -277,7 +278,7 @@ export async function getUserMembershipController(req: Request, res: Response) {
       where: {
         userId_teamId: {
           userId: userId,
-          teamId: team.id,
+          teamId: teamExists.id,
         },
       },
     });
@@ -287,7 +288,16 @@ export async function getUserMembershipController(req: Request, res: Response) {
       return;
     }
 
-    res.status(200).json({ message: "You are a member of this team" });
+    const team = {
+      name: teamExists.name,
+      description: teamExists.description ?? "",
+      joinCode: teamExists.joinCode,
+      createdAt: teamExists.createdAt,
+      role: isMember.role,
+      joinedAt: isMember.joinedAt,
+    };
+
+    res.status(200).json(team);
   } catch (error) {
     console.log("Error in checking team membership: ", error);
     res.status(500).json({ message: "An internal server error occured" });
