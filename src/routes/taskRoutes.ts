@@ -1,12 +1,12 @@
 import { Router } from "express";
 import {
   createTaskController,
-  getUserAssignedTasksController,
+  getTasksController,
 } from "../controllers/taskController";
 
 const taskRoutes = Router();
 
-taskRoutes.get("/", getUserAssignedTasksController);
+taskRoutes.get("/", getTasksController);
 taskRoutes.post("/", createTaskController);
 
 export default taskRoutes;

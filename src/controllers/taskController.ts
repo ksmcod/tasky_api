@@ -95,10 +95,7 @@ export async function createTaskController(req: Request, res: Response) {
 // Controller function for fetching tasks assigned to the user
 // This function retrieves all tasks assigned to the user making the request
 // and sends them back in the response.
-export async function getUserAssignedTasksController(
-  req: Request,
-  res: Response
-) {
+export async function getTasksController(req: Request, res: Response) {
   const userId = req.userId as string;
 
   const { teamCode } = req.query;
@@ -134,14 +131,14 @@ export async function getUserAssignedTasksController(
       return;
     }
 
-    // Fetch tasks assigned to the user
+    // Fetch all team tasks
     const fetchedTasks = await db.task.findMany({
       where: {
-        assigneeId: userInTeam.id,
         teamId: teamExists.id,
       },
     });
 
+    // Format the tasks for the response
     const tasks = fetchedTasks.map((task) => ({
       id: task.id,
       title: task.title,
@@ -151,6 +148,7 @@ export async function getUserAssignedTasksController(
       dueDate: task.dueDate ? task.dueDate.toISOString() : null,
       createdAt: task.createdAt.toISOString(),
       updatedAt: task.updatedAt.toISOString(),
+      assignee: task.assigneeId,
     }));
 
     res.status(200).json(tasks);
