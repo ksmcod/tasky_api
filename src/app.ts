@@ -1,5 +1,6 @@
 import express, { Request, Response, NextFunction } from "express";
 import cookieParser from "cookie-parser";
+import cors from "cors";
 import morgan from "morgan";
 import passport from "passport";
 
@@ -12,7 +13,7 @@ const app = express();
 //Initialize passport
 app.use(passport.initialize());
 
-// Setup passpor strategies
+// Setup passport strategies
 githubStrategy(passport);
 
 // Middleware to parse JSON and URL-encoded data
@@ -22,11 +23,19 @@ app.use(express.urlencoded({ extended: true }));
 // Middleware to parse cookies
 app.use(cookieParser());
 
+// CORS middleware
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+  })
+);
+
 // Middleware to log requests
 if (process.env.NODE_ENV !== "production") {
   app.use(morgan("dev"));
 }
-// Middleware to handle CORS
 
 // Configure routes
 app.use("/api", apiRoutes);

@@ -8,11 +8,13 @@ import {
   removeTeamMemberController,
   leaveTeamController,
   deleteTeamController,
+  getUserMembershipController,
 } from "../controllers/teamController";
 
 const teamRoutes = Router();
 
 teamRoutes.get("/", getAllUserTeamsController);
+teamRoutes.get("/:teamCode", authMiddleware, getUserMembershipController);
 teamRoutes.get("/:teamCode/members", getAllTeamMembersController);
 
 teamRoutes.post("/new", createNewTeamController);

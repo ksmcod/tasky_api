@@ -46,7 +46,7 @@ export async function registerController(req: Request, res: Response) {
         name: `${parsedData.data.firstName} ${parsedData.data.lastName}`,
         email: parsedData.data.email,
         password: hashedPassword,
-        image: `https://avatar.iran.liara.run/username?username=${parsedData.data.firstName}+${parsedData.data.lastName}`,
+        image: `https://ui-avatars.com/api/?name=${parsedData.data.firstName}+${parsedData.data.lastName}`,
       },
     });
 
@@ -128,6 +128,22 @@ export async function loginController(req: Request, res: Response) {
     res.status(200).json({ message: "Login successful" });
   } catch (error) {
     console.log("Error in loginController:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+}
+
+// Logout controller
+// This controller handles user logout
+export async function logoutController(req: Request, res: Response) {
+  try {
+    // Clear the token from the response
+    res.clearCookie("user_token");
+    // setToken("", res);
+
+    // Send the response
+    res.status(200).json({ message: "Logout successful" });
+  } catch (error) {
+    console.log("Error in logoutController:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 }
