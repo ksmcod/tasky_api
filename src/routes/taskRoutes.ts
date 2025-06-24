@@ -1,9 +1,12 @@
 import { Router } from "express";
-import authMiddleware from "../middlewares/authMiddleware";
-import { createTaskController } from "../controllers/taskController";
+import {
+  createTaskController,
+  getUserAssignedTasksController,
+} from "../controllers/taskController";
 
 const taskRoutes = Router();
 
+taskRoutes.get("/", getUserAssignedTasksController);
 taskRoutes.post("/", createTaskController);
 
 export default taskRoutes;
