@@ -4,6 +4,7 @@ import authMiddleware from "../middlewares/authMiddleware";
 import authRoutes from "./authRoutes";
 import userRoutes from "./userRoutes";
 import teamRoutes from "./teamRoutes";
+import taskRoutes from "./taskRoutes";
 
 const apiRoutes = Router();
 
@@ -15,5 +16,6 @@ apiRoutes.get("/status", (req: Request, res: Response) => {
 apiRoutes.use("/auth", authRoutes);
 apiRoutes.use("/user", userRoutes);
 apiRoutes.use("/teams", authMiddleware, teamRoutes);
+apiRoutes.use("/tasks", authMiddleware, taskRoutes);
 
 export default apiRoutes;
