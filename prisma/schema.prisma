@@ -19,6 +19,18 @@ enum TeamRole {
   MEMBER
 }
 
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
 model User {
   id       String  @id @default(auto()) @map("_id") @db.ObjectId
   name     String
@@ -52,6 +64,8 @@ model Team {
   creator   User         @relation("TeamCreator", fields: [creatorId], references: [id], onDelete: Restrict)
   members   TeamMember[]
 
+  tasks Task[]
+
   @@index([creatorId])
 }
 
@@ -69,7 +83,37 @@ model TeamMember {
   joinedAt  DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  taskCreated   Task[] @relation("TaskCreator")
+  tasksAssigned Task[] @relation("TaskAssignee")
+
   @@unique([userId, teamId])
   @@index([userId])
   @@index([teamId])
+}
+
+model Task {
+  id          String       @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  description String?
+  status      TaskStatus   @default(PENDING)
+  priority    TaskPriority @default(MEDIUM)
+  dueDate     DateTime?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  teamId String @db.ObjectId
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  creatorId String     @db.ObjectId
+  creator   TeamMember @relation("TaskCreator", fields: [creatorId], references: [id])
+
+  assigneeId String     @db.ObjectId
+  assignee   TeamMember @relation("TaskAssignee", fields: [assigneeId], references: [id])
+
+  @@index([teamId])
+  @@index([creatorId])
+  @@index([assigneeId])
 }
