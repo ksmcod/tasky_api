@@ -2,6 +2,7 @@ import { NextFunction, Request, Response, Router } from "express";
 import passport from "passport";
 import {
   loginController,
+  logoutController,
   registerController,
 } from "../controllers/authController";
 import setToken from "../utils/setToken";
@@ -10,6 +11,7 @@ const authRoutes = Router();
 
 authRoutes.post("/register", registerController);
 authRoutes.post("/login", loginController);
+authRoutes.post("/logout", logoutController);
 
 // ========================================================================================
 // ==================================== OAUTH =============================================
@@ -26,14 +28,14 @@ authRoutes.get(
   "/github/callback",
   passport.authenticate("github", { session: false }),
   (req: any, res: Response, next: NextFunction) => {
-    // console.log("GITHUB AUTH: Running callback fn");
+    console.log("GITHUB AUTH: Running callback fn");
     if (req.user) {
       // At this point, auth was successful, and a token has been generated
-      // console.log("GITHUB AUTH: User exists | created...");
-      // console.log("The USER token: ", req.user);
+      console.log("GITHUB AUTH: User exists | created...");
+      console.log("The USER token: ", req.user);
       const token = req.user.token as string;
 
-      // console.log("GITHUB AUTH: Token: ", token);
+      console.log("GITHUB AUTH: Token: ", token);
       setToken(token, res);
 
       res.redirect(process.env.CLIENT_URL as string);

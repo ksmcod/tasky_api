@@ -48,6 +48,7 @@ export default async function authMiddleware(
     next();
   } catch (error: any) {
     console.log("JWT verification error: ", error);
+    res.clearCookie("user_token");
     res.status(401).json({ message: error.message ?? "Invalid token" });
     return;
   }

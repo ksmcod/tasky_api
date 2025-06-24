@@ -36,7 +36,7 @@ export async function createNewTeamController(req: Request, res: Response) {
     const teamCode = Math.random().toString(36).slice(2, 10).toLowerCase();
 
     // Create team
-    await db.team.create({
+    const newTeam = await db.team.create({
       data: {
         name: parsedData.data.name,
         description: parsedData.data.description ?? "",
@@ -51,7 +51,7 @@ export async function createNewTeamController(req: Request, res: Response) {
       },
     });
 
-    res.status(201).json({ message: "Team created" });
+    res.status(201).json({ message: `Team code:${newTeam.joinCode}` });
     return;
   } catch (error) {
     // Handle error
@@ -244,6 +244,63 @@ export async function getAllUserTeamsController(req: Request, res: Response) {
     console.log("Error in fetching all teams: ", error);
     res.status(500).json({ message: "Internal server error" });
     return;
+  }
+}
+
+// Is team member controller
+// This controller function verifies that a user is part of a team
+// and returns the team
+export async function getUserMembershipController(req: Request, res: Response) {
+  try {
+    const userId = req.userId as string;
+
+    const { teamCode } = req.params;
+
+    if (!teamCode) {
+      res.status(400).json({ message: "Bad request" });
+      return;
+    }
+
+    // Verify that the team actually exists
+    const teamExists = await db.team.findUnique({
+      where: {
+        joinCode: teamCode,
+      },
+    });
+
+    if (!teamExists) {
+      res.status(404).json({ message: "Team does not exist" });
+      return;
+    }
+
+    // Verify that the user is a member of this team
+    const isMember = await db.teamMember.findUnique({
+      where: {
+        userId_teamId: {
+          userId: userId,
+          teamId: teamExists.id,
+        },
+      },
+    });
+
+    if (!isMember) {
+      res.status(403).json({ message: "You are not a member of this team" });
+      return;
+    }
+
+    const team = {
+      name: teamExists.name,
+      description: teamExists.description ?? "",
+      joinCode: teamExists.joinCode,
+      createdAt: teamExists.createdAt,
+      role: isMember.role,
+      joinedAt: isMember.joinedAt,
+    };
+
+    res.status(200).json(team);
+  } catch (error) {
+    console.log("Error in checking team membership: ", error);
+    res.status(500).json({ message: "An internal server error occured" });
   }
 }
 
