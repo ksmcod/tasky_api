@@ -113,6 +113,12 @@ export async function createTaskController(req: Request, res: Response) {
 export async function getTasksController(req: Request, res: Response) {
   interface GetTasksFilter {
     assigneeId?: string;
+    priority?: {
+      in: TaskPriority[];
+    };
+    status?: {
+      in: TaskStatus[];
+    };
   }
 
   interface GetTasksSorter {
@@ -126,7 +132,9 @@ export async function getTasksController(req: Request, res: Response) {
 
   const {
     teamCode,
-    userTasks,
+    filterByUser,
+    priority,
+    status,
     sortByPriority,
     sortByStatus,
     sortByDueDate,
@@ -168,11 +176,52 @@ export async function getTasksController(req: Request, res: Response) {
       return;
     }
 
+    // ====== Filter Logic ======
     // Verify if we only want tasks assigned to user
-    if (userTasks === "true") {
+    if (filterByUser === "true") {
       queryFilter.assigneeId = userInTeam.id;
     }
 
+    // Filter by priority
+    if (priority) {
+      const priorityValues = Array.from(priority.toString().split(",")).map(
+        (value) => value.toUpperCase()
+      );
+
+      // Filter out any values that are not "LOW", "MEDIUM", or "HIGH"
+      // This is done to prevent any invalid values from being passed to the query.
+
+      const validPriorityValues = priorityValues.filter((value) =>
+        ["LOW", "MEDIUM", "HIGH"].includes(value)
+      );
+
+      if (validPriorityValues.length) {
+        queryFilter.priority = {
+          in: validPriorityValues as TaskPriority[],
+        };
+      }
+    }
+
+    // Filter by status
+    if (status) {
+      const statusValues = Array.from(status.toString().split(",")).map(
+        (value) => value.toUpperCase()
+      );
+
+      // Check that arrar values are either "PENDING", "IN_PROGRESS", or "COMPLETED"
+      const validStatusValues = statusValues.filter((value) =>
+        ["PENDING", "IN_PROGRESS", "COMPLETED"].includes(value)
+      );
+
+      // If there are valid status values, add them to the query filter
+      if (validStatusValues.length) {
+        queryFilter.status = {
+          in: validStatusValues as TaskStatus[],
+        };
+      }
+    }
+
+    // ====== Sort Logic ======
     // Verify if we want to sort by priority
     if (
       (sortByPriority && sortByPriority === "asc") ||
@@ -205,8 +254,6 @@ export async function getTasksController(req: Request, res: Response) {
     const orderByArray = Object.entries(querySorter).map(([key, value]) => ({
       [key]: value,
     }));
-
-    console.log("Order by array:", orderByArray);
 
     // Fetch all team tasks
     const fetchedTasks = await db.task.findMany({
