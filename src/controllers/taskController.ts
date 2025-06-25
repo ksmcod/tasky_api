@@ -2,23 +2,13 @@ import { Request, Response } from "express";
 import db from "../lib/db";
 import { createTaskSchema } from "../schemas/taskSchemas";
 import { TaskPriority, TaskStatus } from "../../generated/prisma";
+import { GetTasksFilter, GetTasksSorter } from "../utils/task-utils";
+import { statusWeightMap, priorityWeightMap } from "../utils/task-utils";
 
 // Controller function for handling task creation
 // This function is responsible for processing the request to create a new task
 // and sending an appropriate response back to the client.
 export async function createTaskController(req: Request, res: Response) {
-  const statusWeightMap = {
-    [TaskStatus.PENDING]: 1,
-    [TaskStatus.IN_PROGRESS]: 2,
-    [TaskStatus.COMPLETED]: 3,
-  };
-
-  const priorityWeightMap = {
-    [TaskPriority.LOW]: 1,
-    [TaskPriority.MEDIUM]: 2,
-    [TaskPriority.HIGH]: 3,
-  };
-
   const parsedData = createTaskSchema.safeParse(req.body);
 
   if (!parsedData.success) {
@@ -110,23 +100,9 @@ export async function createTaskController(req: Request, res: Response) {
 // Controller function for fetching tasks assigned to the user
 // This function retrieves all tasks assigned to the user making the request
 // and sends them back in the response.
-export async function getTasksController(req: Request, res: Response) {
-  interface GetTasksFilter {
-    assigneeId?: string;
-    priority?: {
-      in: TaskPriority[];
-    };
-    status?: {
-      in: TaskStatus[];
-    };
-  }
-
-  interface GetTasksSorter {
-    priorityWeight?: "asc" | "desc";
-    statusWeight?: "asc" | "desc";
-    dueDate?: "asc" | "desc";
-    createdAt?: "asc" | "desc";
-  }
+export async function getTeamTasksController(req: Request, res: Response) {
+  const VALID_PRIORITIES = Object.values(TaskPriority);
+  const VALID_STATUSES = Object.values(TaskStatus);
 
   const userId = req.userId as string;
 
@@ -192,7 +168,7 @@ export async function getTasksController(req: Request, res: Response) {
       // This is done to prevent any invalid values from being passed to the query.
 
       const validPriorityValues = priorityValues.filter((value) =>
-        ["LOW", "MEDIUM", "HIGH"].includes(value)
+        VALID_PRIORITIES.includes(value as TaskPriority)
       );
 
       if (validPriorityValues.length) {
@@ -210,7 +186,7 @@ export async function getTasksController(req: Request, res: Response) {
 
       // Check that arrar values are either "PENDING", "IN_PROGRESS", or "COMPLETED"
       const validStatusValues = statusValues.filter((value) =>
-        ["PENDING", "IN_PROGRESS", "COMPLETED"].includes(value)
+        VALID_STATUSES.includes(value as TaskStatus)
       );
 
       // If there are valid status values, add them to the query filter
@@ -280,6 +256,83 @@ export async function getTasksController(req: Request, res: Response) {
     res.status(200).json(tasks);
   } catch (error) {
     console.error("Error fetching assigned tasks:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+}
+
+// Controller function for fetching a specific task by its ID
+// This function retrieves a task by its ID and sends the task details back in the response.
+export async function getTaskByIdController(req: Request, res: Response) {
+  const { taskId } = req.params;
+
+  if (!taskId) {
+    res.status(400).json({ message: "Task ID is required" });
+    return;
+  }
+
+  try {
+    const userId = req.userId as string;
+
+    // Verify that task exists
+    const task = await db.task.findUnique({
+      where: {
+        id: taskId,
+      },
+      include: {
+        team: true,
+      },
+    });
+
+    if (!task) {
+      res.status(404).json({ message: "Task not found" });
+      return;
+    }
+
+    // Verify that user is part of the team
+    const userInTeam = await db.teamMember.findFirst({
+      where: {
+        teamId: task.teamId,
+        userId: userId,
+      },
+    });
+
+    if (!userInTeam) {
+      res.status(403).json({ message: "You are not part of this team" });
+      return;
+    }
+
+    // Get assignee details
+    const assignee = await db.teamMember.findUnique({
+      where: {
+        id: task.assigneeId,
+      },
+      select: {
+        user: {
+          select: {
+            name: true,
+            email: true,
+            image: true,
+          },
+        },
+      },
+    });
+
+    // Format the task for the response
+    const formattedTask = {
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      status: task.status,
+      priority: task.priority,
+      dueDate: task.dueDate ? task.dueDate.toISOString() : null,
+      createdAt: task.createdAt.toISOString(),
+      updatedAt: task.updatedAt.toISOString(),
+      assignee: { ...assignee?.user },
+    };
+
+    res.status(200).json(formattedTask);
+  } catch (error) {
+    console.log("Error in getTaskByIdController:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 }
