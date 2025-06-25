@@ -92,12 +92,14 @@ model TeamMember {
 }
 
 model Task {
-  id          String       @id @default(auto()) @map("_id") @db.ObjectId
-  title       String
-  description String?
-  status      TaskStatus   @default(PENDING)
-  priority    TaskPriority @default(MEDIUM)
-  dueDate     DateTime?
+  id             String       @id @default(auto()) @map("_id") @db.ObjectId
+  title          String
+  description    String?
+  status         TaskStatus   @default(PENDING)
+  statusWeight   Int          @default(1) // 1 = PENDING, 2 = IN_PROGRESS, 3 = COMPLETED
+  priority       TaskPriority @default(MEDIUM)
+  priorityWeight Int          @default(2) // 1 = LOW, 2 = MEDIUM, 3 = HIGH
+  dueDate        DateTime?
 
   // Timestamps
   createdAt DateTime @default(now())

@@ -2,12 +2,23 @@ import { Request, Response } from "express";
 import db from "../lib/db";
 import { createTaskSchema } from "../schemas/taskSchemas";
 import { TaskPriority, TaskStatus } from "../../generated/prisma";
-import { describe } from "node:test";
 
 // Controller function for handling task creation
 // This function is responsible for processing the request to create a new task
 // and sending an appropriate response back to the client.
 export async function createTaskController(req: Request, res: Response) {
+  const statusWeightMap = {
+    [TaskStatus.PENDING]: 1,
+    [TaskStatus.IN_PROGRESS]: 2,
+    [TaskStatus.COMPLETED]: 3,
+  };
+
+  const priorityWeightMap = {
+    [TaskPriority.LOW]: 1,
+    [TaskPriority.MEDIUM]: 2,
+    [TaskPriority.HIGH]: 3,
+  };
+
   const parsedData = createTaskSchema.safeParse(req.body);
 
   if (!parsedData.success) {
@@ -75,7 +86,11 @@ export async function createTaskController(req: Request, res: Response) {
         title: parsedData.data.title,
         description: parsedData.data.description,
         status: parsedData.data.status ?? TaskStatus.PENDING,
+        statusWeight:
+          statusWeightMap[parsedData.data.status ?? TaskStatus.PENDING],
         priority: parsedData.data.priority ?? TaskPriority.MEDIUM,
+        priorityWeight:
+          priorityWeightMap[parsedData.data.priority ?? TaskPriority.MEDIUM],
         dueDate: parsedData.data.dueDate
           ? new Date(parsedData.data.dueDate)
           : null,
@@ -96,9 +111,27 @@ export async function createTaskController(req: Request, res: Response) {
 // This function retrieves all tasks assigned to the user making the request
 // and sends them back in the response.
 export async function getTasksController(req: Request, res: Response) {
+  interface GetTasksFilter {
+    assigneeId?: string;
+  }
+
+  interface GetTasksSorter {
+    priorityWeight?: "asc" | "desc";
+    statusWeight?: "asc" | "desc";
+    dueDate?: "asc" | "desc";
+    createdAt?: "asc" | "desc";
+  }
+
   const userId = req.userId as string;
 
-  const { teamCode } = req.query;
+  const {
+    teamCode,
+    userTasks,
+    sortByPriority,
+    sortByStatus,
+    sortByDueDate,
+    sortByCreationDate,
+  } = req.query;
 
   if (!teamCode) {
     res.status(400).json({ message: "Team code is required" });
@@ -106,6 +139,10 @@ export async function getTasksController(req: Request, res: Response) {
   }
 
   try {
+    // Query filter object
+    const queryFilter: GetTasksFilter = {};
+    const querySorter: GetTasksSorter = {};
+
     // Verify that team exists
     const teamExists = await db.team.findUnique({
       where: {
@@ -131,11 +168,53 @@ export async function getTasksController(req: Request, res: Response) {
       return;
     }
 
+    // Verify if we only want tasks assigned to user
+    if (userTasks === "true") {
+      queryFilter.assigneeId = userInTeam.id;
+    }
+
+    // Verify if we want to sort by priority
+    if (
+      (sortByPriority && sortByPriority === "asc") ||
+      sortByPriority === "desc"
+    ) {
+      querySorter.priorityWeight = sortByPriority;
+    }
+
+    // Verify if we want to sort by status
+    if ((sortByStatus && sortByStatus === "asc") || sortByStatus === "desc") {
+      querySorter.statusWeight = sortByStatus;
+    }
+
+    // Verify if we want to sort by due date
+    if (
+      (sortByDueDate && sortByDueDate === "asc") ||
+      sortByDueDate === "desc"
+    ) {
+      querySorter.dueDate = sortByDueDate;
+    }
+
+    // Verify if we want to sort by creation date
+    if (
+      (sortByCreationDate && sortByCreationDate === "asc") ||
+      sortByCreationDate === "desc"
+    ) {
+      querySorter.createdAt = sortByCreationDate;
+    }
+
+    const orderByArray = Object.entries(querySorter).map(([key, value]) => ({
+      [key]: value,
+    }));
+
+    console.log("Order by array:", orderByArray);
+
     // Fetch all team tasks
     const fetchedTasks = await db.task.findMany({
       where: {
+        ...queryFilter,
         teamId: teamExists.id,
       },
+      orderBy: orderByArray,
     });
 
     // Format the tasks for the response
