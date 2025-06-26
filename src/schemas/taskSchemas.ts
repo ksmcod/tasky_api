@@ -19,7 +19,6 @@ export const createTaskSchema = z.object({
 });
 
 export const updateTaskSchema = z.object({
-  taskId: z.string().nonempty({ message: "Task ID is required" }),
   title: z.string().optional(),
   description: z.string().optional(),
   status: z.enum(["PENDING", "IN_PROGRESS", "COMPLETED"]).optional(),
@@ -30,9 +29,4 @@ export const updateTaskSchema = z.object({
     .refine((date) => !date || !isNaN(Date.parse(date)), {
       message: "Due date must be a valid date",
     }),
-  assigneeEmail: z
-    .string()
-    .email({ message: "Invalid assignee email" })
-    .optional(),
-  teamCode: z.string().nonempty({ message: "Team code is required" }),
 });

@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import db from "../lib/db";
-import { createTaskSchema } from "../schemas/taskSchemas";
+import { createTaskSchema, updateTaskSchema } from "../schemas/taskSchemas";
 import { TaskPriority, TaskStatus } from "../../generated/prisma";
 import { GetTasksFilter, GetTasksSorter } from "../utils/task-utils";
 import { statusWeightMap, priorityWeightMap } from "../utils/task-utils";
@@ -333,6 +333,84 @@ export async function getTaskByIdController(req: Request, res: Response) {
     res.status(200).json(formattedTask);
   } catch (error) {
     console.log("Error in getTaskByIdController:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+}
+
+// Controller function for updating a task
+// This function processes the request to update an existing task and sends an appropriate response back to the client.
+export async function updateTaskController(req: Request, res: Response) {
+  const userId = req.userId as string;
+  const { taskId } = req.params;
+
+  if (!taskId) {
+    res.status(400).json({ message: "Task ID is required" });
+    return;
+  }
+
+  try {
+    // Validate the request body against the update task schema
+    const parsedData = updateTaskSchema.safeParse(req.body);
+
+    if (!parsedData.success) {
+      res.status(400).json({ message: "Invalid task data" });
+      return;
+    }
+
+    // Verify task exists
+    const task = await db.task.findUnique({
+      where: {
+        id: taskId,
+      },
+      include: {
+        team: true,
+      },
+    });
+
+    if (!task) {
+      res.status(404).json({ message: "Task not found" });
+      return;
+    }
+    // Verify that user is part of the team
+    const userInTeam = await db.teamMember.findFirst({
+      where: {
+        teamId: task.teamId,
+        userId: userId,
+      },
+    });
+
+    if (!userInTeam) {
+      res.status(403).json({ message: "You are not part of this team" });
+      return;
+    }
+
+    const isCreator = userInTeam.id === task.creatorId;
+    const isAssignee = userInTeam.id === task.assigneeId;
+
+    // If the user is not the creator or assignee, they cannot update the task
+    if (!isCreator && !isAssignee) {
+      res
+        .status(403)
+        .json({ message: "You are not authorized to update this task" });
+      return;
+    }
+
+    const updatedTask = await db.task.update({
+      where: { id: taskId },
+      data: {
+        ...parsedData.data,
+        statusWeight: statusWeightMap[parsedData.data.status ?? task.status],
+        priorityWeight:
+          priorityWeightMap[parsedData.data.priority ?? task.priority],
+        dueDate: parsedData.data.dueDate
+          ? new Date(parsedData.data.dueDate)
+          : task.dueDate,
+      },
+    });
+
+    res.status(200).json(updatedTask);
+  } catch (error) {
+    console.error("Error in updateTaskController:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 }
