@@ -414,3 +414,58 @@ export async function updateTaskController(req: Request, res: Response) {
     res.status(500).json({ message: "Internal server error" });
   }
 }
+
+// Controller function for deleting a task
+// This function processes the request to delete an existing task and sends an appropriate response back to the client.
+export async function deleteTaskController(req: Request, res: Response) {
+  const { taskId } = req.params;
+
+  if (!taskId) {
+    res.status(400).json({ message: "Task ID is required" });
+    return;
+  }
+
+  try {
+    const userId = req.userId as string;
+
+    // Get the task and team info
+    const task = await db.task.findUnique({
+      where: { id: taskId },
+    });
+
+    if (!task) {
+      res.status(404).json({ message: "Task not found" });
+      return;
+    }
+
+    // Get current user's team membership
+    const teamMember = await db.teamMember.findFirst({
+      where: {
+        teamId: task.teamId,
+        userId,
+      },
+    });
+
+    if (!teamMember) {
+      res.status(403).json({ message: "You are not part of this team" });
+      return;
+    }
+
+    // Check if the user is the creator
+    if (teamMember.id !== task.creatorId) {
+      res
+        .status(403)
+        .json({ message: "Only the creator can delete this task" });
+      return;
+    }
+
+    await db.task.delete({
+      where: { id: taskId },
+    });
+
+    res.status(200).json({ message: "Task deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting task:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+}
